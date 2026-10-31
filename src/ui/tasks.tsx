@@ -68,6 +68,7 @@ import type {
   Status,
 } from "../domain/types.ts";
 import { useBoardSlot } from "./boardDrop.ts";
+import { acceptCompletionToggle } from "./completionGuard.ts";
 import { DictateButton } from "./dictate.tsx";
 import { LinkedText } from "./links.tsx";
 import { MarkdownField } from "./markdownField.tsx";
@@ -641,6 +642,7 @@ export function toggleComplete(
   item: Item,
   askConfirm: (value: ConfirmState) => void
 ) {
+  if (!acceptCompletionToggle()) return;
   const ops = completionOps(db, item, false);
   const checked = isChecked(db, item);
   const openChildren = subtasksOf(db, item.id).filter((child) =>
