@@ -12,3 +12,5 @@ dev-dist
 *.pem
 *.key
 credentials.json
+
+.idea
