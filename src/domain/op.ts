@@ -1,5 +1,4 @@
 import type {
-  FolderColor,
   FolderPaint,
   FolderPatch,
   ItemPatch,
@@ -62,14 +61,14 @@ export type Op =
       type: "createPerson";
       id: string;
       name: string;
-      color: FolderColor | null;
+      color: FolderPaint | null;
       emoji: string | null;
     }
   | {
       type: "updatePerson";
       id: string;
       name?: string;
-      color?: FolderColor | null;
+      color?: FolderPaint | null;
       emoji?: string | null;
     }
   | { type: "deletePerson"; id: string }
@@ -83,6 +82,21 @@ export type Op =
       kind: LinkKind;
     }
   | { type: "removeLink"; id: string }
+  | {
+      type: "createMilestone";
+      id: string;
+      folderId: string | null;
+      title: string;
+      day: string;
+    }
+  | {
+      type: "updateMilestone";
+      id: string;
+      title?: string;
+      day?: string;
+      color?: FolderPaint | null;
+    }
+  | { type: "deleteMilestone"; id: string }
   | {
       type: "createView";
       id: string;

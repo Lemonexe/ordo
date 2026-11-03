@@ -67,6 +67,7 @@ import type {
   Priority,
   Status,
 } from "../domain/types.ts";
+import { PersonBadge } from "./paint.tsx";
 import { useBoardSlot } from "./boardDrop.ts";
 import { acceptCompletionToggle } from "./completionGuard.ts";
 import { DictateButton } from "./dictate.tsx";
@@ -828,6 +829,7 @@ export function TaskRow({
     item.dueAt && item.dueAt.slice(0, 10) < today && isOpenItem(db, item)
   );
   const tags = tagsOf(db, item.id);
+  const person = byId(db.people, item.assigneeId);
   const blocked = blockingItems(db, item.id).length > 0;
   const children = subtasksOf(db, item.id);
   const repeat = recurrenceLabel(item);
@@ -892,6 +894,7 @@ export function TaskRow({
               clamp
               className="min-w-0 flex-1 leading-6"
             />
+            {person && <PersonBadge person={person} />}
           </div>
           {ui.editingBodyId === item.id ? (
             <TaskBodyEditor item={item} struck={checked} />
@@ -1549,6 +1552,7 @@ function BoardCard({ item }: { item: Item }) {
   const dragClick = useDragGuard(isDragging);
   const displaced = useDragDisplaced(isDragging);
   const tags = tagsOf(db, item.id);
+  const person = byId(db.people, item.assigneeId);
   const repeat = recurrenceLabel(item);
   const when = whenLabel(item, todayKey());
   const hasMeta = Boolean(
@@ -1610,25 +1614,26 @@ function BoardCard({ item }: { item: Item }) {
           truncate={false}
           className="min-w-0 flex-1 py-2 text-sm font-medium leading-5"
         />
-        {hasMeta && (
-          <span className="flex min-w-0 shrink items-center gap-2 text-xs leading-4 text-muted">
-            {when && <span>{when}</span>}
-            {repeat && <span>{repeat}</span>}
-            <Dictated item={item} />
-            {tags.map((tag) => (
-              <Link
-                key={tag.id}
-                href={`/tag/${tag.id}`}
-                className="hover:text-ink"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <TagMark name={tag.name} color={tag.color} />
-              </Link>
-            ))}
-          </span>
-        )}
+        {person && <PersonBadge person={person} />}
         <PriorityNudge item={item} />
       </div>
+      {hasMeta && (
+        <span className="-mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pb-2 text-xs leading-4 text-muted">
+          {when && <span>{when}</span>}
+          {repeat && <span>{repeat}</span>}
+          <Dictated item={item} />
+          {tags.map((tag) => (
+            <Link
+              key={tag.id}
+              href={`/tag/${tag.id}`}
+              className="hover:text-ink"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <TagMark name={tag.name} color={tag.color} />
+            </Link>
+          ))}
+        </span>
+      )}
       {isOpenItem(db, item) && (
         <div className="w-fit pb-2 empty:hidden">
           <FolderHint item={item} />

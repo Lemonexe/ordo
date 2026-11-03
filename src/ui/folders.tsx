@@ -1052,7 +1052,7 @@ export function FolderDialog() {
             value={view}
             onChange={(event) => setView(event.target.value as ViewMode)}
           >
-            {(["list", "board", "notes", "calendar"] as const).map((value) => (
+            {(["list", "board", "notes", "calendar", "gantt"] as const).map((value) => (
               <option key={value} value={value}>
                 {viewLabel(value)}
               </option>

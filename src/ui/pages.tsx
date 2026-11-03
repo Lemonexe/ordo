@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  ChartGantt,
   ChevronDown,
   ChevronRight,
   ChevronsUp,
@@ -78,6 +79,7 @@ import {
 } from "../domain/types.ts";
 import { eventsOnDay } from "../lib/gcalEvents.ts";
 import { CalendarBoard, PlanTargets } from "./calendar.tsx";
+import { GanttBoard } from "./gantt.tsx";
 import {
   Dot,
   FolderChildren,
@@ -519,107 +521,134 @@ export function InboxPage() {
   );
 }
 
-function ViewSwitch({
+type TaskLayout = Exclude<ViewMode, "notes">;
+
+const TASK_LAYOUTS: Array<[TaskLayout, typeof List, string]> = [
+  ["list", List, "Seznam"],
+  ["board", Columns3, "Nástěnka"],
+  ["calendar", CalendarDays, "Kalendář"],
+  ["gantt", ChartGantt, "Časová osa"],
+];
+
+function layoutKey(folderId: string) {
+  return `ordo.taskLayout:${folderId}`;
+}
+
+// Last way of showing tasks in a folder, so Úkoly returns to it after notes.
+function lastTaskLayout(folderId: string): TaskLayout {
+  try {
+    const value = localStorage.getItem(layoutKey(folderId));
+    return TASK_LAYOUTS.some(([mode]) => mode === value)
+      ? (value as TaskLayout)
+      : "list";
+  } catch {
+    return "list";
+  }
+}
+
+function rememberTaskLayout(folderId: string, layout: TaskLayout) {
+  try {
+    localStorage.setItem(layoutKey(folderId), layout);
+  } catch {
+    // Only a convenience.
+  }
+}
+
+// What the folder shows: tasks or notes.
+function KindSwitch({
+  folderId,
   view,
   taskCount,
   noteCount,
   onChoose,
 }: {
+  folderId: string;
   view: ViewMode;
   taskCount: number;
   noteCount: number;
   onChoose: (view: ViewMode) => void;
 }) {
-  const taskLayout = useRef<"list" | "board">(
-    view === "board" ? "board" : "list"
-  );
-  if (view === "list" || view === "board") taskLayout.current = view;
-  const tasksOn = view === "list" || view === "board";
+  const notesOn = view === "notes";
+  const segment = (active: boolean) =>
+    cx(
+      "flex items-center gap-1.5 rounded-md px-3 py-1 text-sm whitespace-nowrap",
+      active
+        ? "bg-raised text-ink! shadow-[var(--shadow)]"
+        : "text-muted! hover:text-ink!"
+    );
   return (
     <div
       className="flex items-center gap-0.5 rounded-lg bg-black/5 p-0.5 dark:bg-white/10"
       role="group"
-      aria-label="Pohled"
+      aria-label="Obsah složky"
     >
-      <div
-        className={cx(
-          "flex items-center rounded-md pr-0.5",
-          tasksOn && "bg-raised shadow-[var(--shadow)]"
-        )}
-      >
-        <button
-          type="button"
-          aria-pressed={tasksOn}
-          className={cx(
-            "flex items-center gap-1.5 rounded-md py-1 pr-1 pl-2.5 text-sm whitespace-nowrap",
-            tasksOn ? "text-ink!" : "text-muted! hover:text-ink!"
-          )}
-          onClick={() => onChoose(taskLayout.current)}
-        >
-          Úkoly
-          <span className="text-xs tabular-nums text-muted">{taskCount}</span>
-        </button>
-        {(
-          [
-            ["list", List, "Seznam"],
-            ["board", Columns3, "Nástěnka"],
-          ] as const
-        ).map(([mode, Icon, label]) => (
-          <button
-            key={mode}
-            type="button"
-            aria-label={label}
-            title={label}
-            aria-pressed={view === mode}
-            className={cx(
-              "grid size-7 place-items-center rounded-md",
-              view === mode
-                ? "bg-black/5 text-ink! dark:bg-white/10"
-                : "text-muted! hover:text-ink!"
-            )}
-            onClick={() => onChoose(mode)}
-          >
-            <Icon size={16} />
-          </button>
-        ))}
-      </div>
-      <span
-        className="mx-0.5 h-4 w-px shrink-0 bg-black/10 dark:bg-white/15"
-        aria-hidden
-      />
       <button
         type="button"
-        aria-pressed={view === "notes"}
-        className={cx(
-          "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm whitespace-nowrap",
-          view === "notes"
-            ? "bg-raised text-ink! shadow-[var(--shadow)]"
-            : "text-muted! hover:text-ink!"
-        )}
-        onClick={() => onChoose("notes")}
+        aria-pressed={!notesOn}
+        className={segment(!notesOn)}
+        onClick={() => onChoose(notesOn ? lastTaskLayout(folderId) : view)}
+      >
+        Úkoly
+        <span className="text-xs tabular-nums text-muted">{taskCount}</span>
+      </button>
+      <button
+        type="button"
+        aria-pressed={notesOn}
+        className={segment(notesOn)}
+        onClick={() => {
+          if (!notesOn) rememberTaskLayout(folderId, view as TaskLayout);
+          onChoose("notes");
+        }}
       >
         Poznámky
         <span className="text-xs tabular-nums text-muted">{noteCount}</span>
       </button>
-      <span
-        className="mx-0.5 h-4 w-px shrink-0 bg-black/10 dark:bg-white/15"
-        aria-hidden
-      />
-      <button
-        type="button"
-        aria-label="Kalendář"
-        title="Kalendář"
-        aria-pressed={view === "calendar"}
-        className={cx(
-          "grid size-7 place-items-center rounded-md",
-          view === "calendar"
-            ? "bg-raised text-ink! shadow-[var(--shadow)]"
-            : "text-muted! hover:text-ink!"
-        )}
-        onClick={() => onChoose("calendar")}
-      >
-        <CalendarDays size={16} />
-      </button>
+    </div>
+  );
+}
+
+// How the tasks are laid out. Hidden for notes.
+function LayoutTabs({
+  folderId,
+  view,
+  onChoose,
+}: {
+  folderId: string;
+  view: TaskLayout;
+  onChoose: (view: ViewMode) => void;
+}) {
+  return (
+    <div
+      className="mb-4 flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line"
+      role="tablist"
+      aria-label="Zobrazení úkolů"
+    >
+      {TASK_LAYOUTS.map(([mode, Icon, label]) => {
+        const active = view === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={label}
+            title={label}
+            className={cx(
+              "-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-2 text-sm whitespace-nowrap",
+              active
+                ? "border-accent font-medium text-ink!"
+                : "border-transparent text-muted! hover:text-ink!"
+            )}
+            onClick={() => {
+              rememberTaskLayout(folderId, mode);
+              onChoose(mode);
+            }}
+          >
+            <Icon size={16} className="shrink-0" />
+            <span className={cx(!active && "max-sm:hidden")}>{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -643,6 +672,15 @@ function FolderScreen({
         entry !== null && !entry.isDeleted && !entry.isArchived
     );
   const notes = items.filter((item) => item.type === "note");
+  const choose = (mode: ViewMode) => {
+    ui.setGlance(null);
+    if (folder.defaultView === mode) return;
+    dispatch({
+      type: "updateFolder",
+      id: folder.id,
+      patch: { defaultView: mode },
+    });
+  };
   const tasks = items.filter((item) => item.type === "task");
   return (
     <div
@@ -673,23 +711,19 @@ function FolderScreen({
           </div>
           {intro}
         </div>
-        <ViewSwitch
+        <KindSwitch
+          folderId={folder.id}
           view={view}
           taskCount={
             tasks.filter((item) => ui.showDone || isOpenItem(db, item)).length
           }
           noteCount={notes.length}
-          onChoose={(mode) => {
-            ui.setGlance(null);
-            if (folder.defaultView === mode) return;
-            dispatch({
-              type: "updateFolder",
-              id: folder.id,
-              patch: { defaultView: mode },
-            });
-          }}
+          onChoose={choose}
         />
       </div>
+      {view !== "notes" && (
+        <LayoutTabs folderId={folder.id} view={view} onChoose={choose} />
+      )}
       {view === "list" && (
         <>
           <FolderChildren parentId={folder.id} />
@@ -700,6 +734,17 @@ function FolderScreen({
       {view === "notes" && <Notes folderId={folder.id} notes={notes} />}
       {view === "calendar" && (
         <CalendarBoard
+          folderId={folder.id}
+          items={visibleItems(db).filter(
+            (item) =>
+              item.folderId === folder.id ||
+              nested.some((entry) => entry.id === item.folderId)
+          )}
+        />
+      )}
+      {view === "gantt" && (
+        <GanttBoard
+          key={folder.id}
           folderId={folder.id}
           items={visibleItems(db).filter(
             (item) =>

@@ -1,7 +1,7 @@
 export type StatusMeaning = "todo" | "doing" | "done" | "cancelled" | "none";
 export type ItemType = "task" | "note";
 export type Priority = "low" | "high" | "urgent";
-export type ViewMode = "list" | "board" | "notes" | "calendar";
+export type ViewMode = "list" | "board" | "notes" | "calendar" | "gantt";
 export type ItemSort = "priority" | "created";
 export type RecurrenceFreq = "daily" | "weekly" | "monthly" | "yearly" | "interval";
 export type LinkKind = "related" | "taskFromNote";
@@ -151,6 +151,8 @@ export type Item = {
   pristine: boolean;
   sortOrder: string;
   dayOrder: string | null;
+  ganttOrder: string | null;
+  color: FolderPaint | null;
   pinX: number | null;
   pinY: number | null;
   pinZ: number | null;
@@ -188,7 +190,7 @@ export type Person = {
   id: string;
   workspaceId: string;
   name: string;
-  color: FolderColor | null;
+  color: FolderPaint | null;
   emoji: string | null;
   isDeleted: boolean;
   createdAt: string;
@@ -211,6 +213,20 @@ export type ItemLink = {
   fromId: string;
   toId: string;
   kind: LinkKind;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// A date that matters for a whole folder, drawn as a vertical line on the
+// timeline. Without a folder it shows everywhere.
+export type Milestone = {
+  id: string;
+  workspaceId: string;
+  folderId: string | null;
+  title: string;
+  day: string;
+  color: FolderPaint | null;
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
@@ -267,6 +283,7 @@ export type Db = {
   people: Person[];
   dependencies: Dependency[];
   itemLinks: ItemLink[];
+  milestones: Milestone[];
   savedViews: SavedView[];
   rules: Rule[];
 };
@@ -302,6 +319,8 @@ export type ItemPatch = {
   parentItemId?: string | null;
   sortOrder?: string;
   dayOrder?: string | null;
+  ganttOrder?: string | null;
+  color?: FolderPaint | null;
   pinX?: number | null;
   pinY?: number | null;
   pinZ?: number | null;

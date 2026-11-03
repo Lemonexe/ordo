@@ -6,7 +6,8 @@ import { dispatch, useSnap } from "../data/store.tsx";
 import { alive, statusMeaning } from "../domain/db.ts";
 import { meaningLabel } from "../domain/labels.ts";
 import { personItems } from "../domain/select.ts";
-import type { StatusMeaning } from "../domain/types.ts";
+import type { Person, StatusMeaning } from "../domain/types.ts";
+import { PaintPicker, PersonBadge } from "./paint.tsx";
 import { ItemList } from "./tasks.tsx";
 import { Button, control, cx, Field, hoverRow, OpenMark } from "./ui.tsx";
 
@@ -53,6 +54,7 @@ export function PeoplePage() {
           <PersonLink
             key={person.id}
             id={person.id}
+            person={person}
             name={person.name}
             count={
               personItems(db, person.id).filter(
@@ -68,10 +70,12 @@ export function PeoplePage() {
 
 function PersonLink({
   id,
+  person,
   name,
   count,
 }: {
   id: string;
+  person: Person;
   name: string;
   count: number;
 }) {
@@ -91,6 +95,7 @@ function PersonLink({
           hoverRow
         )}
       >
+        <PersonBadge person={person} />
         <span className="min-w-0 flex-1 truncate">{name}</span>
         <span className="rounded-sm bg-black/5 px-1.5 py-0.5 text-xs text-muted dark:bg-white/10">
           {count}
@@ -110,7 +115,10 @@ export function PersonPage({ personId }: { personId: string }) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="font-display text-3xl">{person.name}</h1>
+        <h1 className="flex items-center gap-3 font-display text-3xl">
+          <PersonBadge person={person} large />
+          {person.name}
+        </h1>
         <Button
           tone="danger"
           onClick={() => {
@@ -121,6 +129,17 @@ export function PersonPage({ personId }: { personId: string }) {
           Smazat
         </Button>
       </div>
+      <section className="mb-6 grid max-w-md gap-2">
+        <h2 className="text-sm font-semibold">Barva</h2>
+        <PaintPicker
+          value={person.color}
+          inheritLabel="Bez barvy"
+          inheritPaint="var(--muted)"
+          onChange={(color) =>
+            dispatch({ type: "updatePerson", id: person.id, color })
+          }
+        />
+      </section>
       <div className="board-row">
         {(items.some((item) => statusMeaning(db, item.statusId) === "none")
           ? [...MEANINGS, "none" as const]

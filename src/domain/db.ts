@@ -1,6 +1,7 @@
 import { generateKeyBetween } from "fractional-indexing";
 import { keyAtEnd } from "./ordering.ts";
 import { storedAmount, storedSymbol } from "./dictate.ts";
+import { normalizeFolderColor } from "./color.ts";
 import { storedPlace } from "./place.ts";
 import { paperIndex } from "./stickies.ts";
 import type { Ctx, Db, Folder, Item, Status, StatusMeaning } from "./types.ts";
@@ -147,6 +148,7 @@ export function emptyDb(): Db {
     people: [],
     dependencies: [],
     itemLinks: [],
+    milestones: [],
     savedViews: [],
     rules: [],
   };
@@ -252,6 +254,8 @@ export function withPlan(db: Db): Db {
       omitKeys({
         ...item,
         planUntil: item.planUntil ?? null,
+        ganttOrder: typeof item.ganttOrder === "string" ? item.ganttOrder : null,
+        color: normalizeFolderColor(item.color),
         place: storedPlace(item.place),
         origin: storedPlace(item.origin),
         spot: storedPlace(item.spot),
@@ -265,6 +269,9 @@ export function withPlan(db: Db): Db {
         "spec",
         "templateId",
       ])
+    ),
+    milestones: (Array.isArray(db.milestones) ? db.milestones : []).map(
+      (row) => ({ ...row, color: normalizeFolderColor(row.color) })
     ),
     rules: db.rules.map((rule) => omitKeys(rule, ["actionStore"])),
     savedViews: db.savedViews.map((view) => ({

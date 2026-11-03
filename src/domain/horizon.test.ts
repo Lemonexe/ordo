@@ -129,7 +129,9 @@ describe("období", () => {
   it("pojmenuje uložené rozmezí", () => {
     expect(planLabel("2027-03-01", "2027-05-31", saturday)).toBe("jaro");
     expect(planLabel("2026-10-17", "2026-10-18", saturday)).toBe("víkend");
-    expect(planLabel(saturday, "2027-01-17", saturday)).toBe("do 17. 1. 2027");
+    expect(planLabel(saturday, "2027-01-17", saturday)).toBe("dnes – 17. 1. 2027");
+    expect(planLabel("2026-10-12", "2026-10-21", saturday)).toBe("12. 10. – 21. 10.");
+    expect(planLabel("2026-10-20", "2026-10-22", saturday)).toBe("20. 10. – 22. 10.");
     expect(planLabel("2026-10-20", null, saturday)).toBe("20. 10.");
   });
 });

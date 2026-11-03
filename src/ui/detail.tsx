@@ -6,6 +6,7 @@ import {
   FolderInput,
   Link2,
   ListChecks,
+  Palette,
   Plus,
   Repeat,
   Tag,
@@ -29,6 +30,7 @@ import {
   isoWeekday,
   todayKey,
 } from "../domain/dates.ts";
+import { daysBetween } from "../domain/gantt.ts";
 import { alive, byId, resolvedOpen, statusesOf } from "../domain/db.ts";
 import { newItem } from "../domain/factory.ts";
 import { pullHashtags, removeToken } from "../domain/hashtags.ts";
@@ -57,10 +59,12 @@ import {
 import { fold } from "../domain/text.ts";
 import type { Item, RecurrenceFreq } from "../domain/types.ts";
 import { downloadIcs, googleCalendarUrl } from "../lib/ics.ts";
+import { paintCss } from "../domain/color.ts";
 import { FolderPicker } from "./folderPick.tsx";
 import { FolderCrumbs } from "./folders.tsx";
 import { useTasksInGoogle } from "./gcal.tsx";
 import { MarkdownField } from "./markdownField.tsx";
+import { PaintPicker } from "./paint.tsx";
 import { placeOp } from "./move.ts";
 import { useUi } from "./state.tsx";
 import { dispatchTaskText, TagMenu, useTagHint } from "./tagHint.tsx";
@@ -182,7 +186,7 @@ function WhenFields({ item }: { item: Item }) {
         {(
           [
             ["due", "Přesný termín"],
-            ["plan", "Plán"],
+            ["plan", "Od – do"],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -286,15 +290,54 @@ function PlanEditor({ item }: { item: Item }) {
           );
         })}
       </div>
-      <input
-        className={control}
-        type="date"
-        aria-label="Naplánovat na"
-        value={ranged ? "" : item.plannedFor ?? ""}
-        onChange={(event) => apply(event.target.value || null, null)}
-      />
+      <div className="grid grid-cols-2 gap-2">
+        <label className="grid gap-1 text-xs text-muted">
+          Od
+          <input
+            className={control}
+            type="date"
+            value={item.plannedFor ?? ""}
+            onChange={(event) => {
+              const from = event.target.value || null;
+              const until = ranged ? item.planUntil : null;
+              apply(from, from && until && until > from ? until : null);
+            }}
+          />
+        </label>
+        <label className="grid gap-1 text-xs text-muted">
+          Do
+          <input
+            className={control}
+            type="date"
+            min={item.plannedFor ?? undefined}
+            value={ranged ? item.planUntil ?? "" : ""}
+            onChange={(event) => {
+              const until = event.target.value || null;
+              if (!until) {
+                apply(item.plannedFor, null);
+                return;
+              }
+              const from = item.plannedFor ?? until;
+              if (until < from) apply(until, from);
+              else apply(from, until);
+            }}
+          />
+        </label>
+      </div>
+      {item.plannedFor && ranged && (
+        <p className="text-xs text-muted">
+          {planDays(item.plannedFor, item.planUntil)} v kuse
+        </p>
+      )}
     </div>
   );
+}
+
+function planDays(from: string, until: string | null): string {
+  const count = daysBetween(from, until ?? from) + 1;
+  if (count === 1) return "1 den";
+  if (count >= 2 && count <= 4) return `${count} dny`;
+  return `${count} dní`;
 }
 
 function DueFields({ item }: { item: Item }) {
@@ -672,6 +715,25 @@ export function Detail({ item }: { item: Item }) {
                     />
                   )}
                   {extra === "priority" && <PriorityFields item={item} />}
+                  {extra === "color" && (
+                    <PaintPicker
+                      value={item.color ?? null}
+                      inheritLabel="Podle složky"
+                      inheritPaint={(() => {
+                        const folder = byId(db.folders, item.folderId);
+                        return folder?.color
+                          ? paintCss(folder.color)
+                          : "var(--muted)";
+                      })()}
+                      onChange={(color) =>
+                        dispatch({
+                          type: "updateItem",
+                          id: item.id,
+                          patch: { color },
+                        })
+                      }
+                    />
+                  )}
                   {extra === "person" && <PersonAssign item={item} />}
                   {extra === "tag" && (
                     <TagAdder
@@ -755,6 +817,12 @@ export function Detail({ item }: { item: Item }) {
                       onClick={() => toggle("priority")}
                     >
                       <Flag size={15} /> Priorita
+                    </ActionButton>
+                    <ActionButton
+                      pressed={extra === "color"}
+                      onClick={() => toggle("color")}
+                    >
+                      <Palette size={15} /> Barva
                     </ActionButton>
                     <ActionButton
                       pressed={extra === "person"}

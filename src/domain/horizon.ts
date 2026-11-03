@@ -151,7 +151,6 @@ export function planLabel(
   if (!until || until <= from) return formatDay(from, today);
   const named = namedSpan(from, until, today);
   if (named) return named;
-  if (from <= today) return `do ${formatDay(until, today)}`;
   return `${formatDay(from, today)} – ${formatDay(until, today)}`;
 }
 

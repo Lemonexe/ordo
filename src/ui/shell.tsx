@@ -28,9 +28,10 @@ import { Link, Redirect, Route, Switch, useLocation, useParams } from "wouter";
 import { dispatch, redo, undo, useSnap } from "../data/store.tsx";
 import { getSyncView, subscribeSync } from "../data/sync.ts";
 import { alive, byId, resolvedClosed, resolvedOpen } from "../domain/db.ts";
-import { mapStatus } from "../domain/select.ts";
+import { mapStatus, visibleItems } from "../domain/select.ts";
 import { ActivityPage, openLinkedItem } from "./activity.tsx";
 import { CalendarBoard } from "./calendar.tsx";
+import { GanttBoard } from "./gantt.tsx";
 import { Detail } from "./detail.tsx";
 import { DragLayer } from "./dnd.tsx";
 import { revertLast, undoDraftFolder, useDraftFolder } from "./draftFolder.ts";
@@ -818,17 +819,69 @@ function AddRoute() {
   return <p className="text-sm text-muted">Přidávám…</p>;
 }
 
+const CALENDAR_LAYOUT_KEY = "ordo.calendarLayout";
+
+function readCalendarLayout(): "month" | "gantt" {
+  try {
+    return localStorage.getItem(CALENDAR_LAYOUT_KEY) === "gantt"
+      ? "gantt"
+      : "month";
+  } catch {
+    return "month";
+  }
+}
+
 function CalendarRoute() {
   const { db } = useSnap();
+  const [layout, setLayout] = useState(readCalendarLayout);
+  const choose = (next: "month" | "gantt") => {
+    setLayout(next);
+    try {
+      localStorage.setItem(CALENDAR_LAYOUT_KEY, next);
+    } catch {
+      // Remembering the layout is only a convenience.
+    }
+  };
+  const items = db.items.filter(
+    (item) => !item.isDeleted && item.type === "task"
+  );
   return (
     <div>
-      <h1 className="mb-4 font-display text-3xl">Kalendář</h1>
-      <CalendarBoard
-        items={db.items.filter(
-          (item) => !item.isDeleted && item.type === "task"
-        )}
-        external
-      />
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="font-display text-3xl">Kalendář</h1>
+        <div
+          className="flex items-center gap-0.5 rounded-lg bg-black/5 p-0.5 dark:bg-white/10"
+          role="group"
+          aria-label="Pohled"
+        >
+          {(
+            [
+              ["month", "Měsíc"],
+              ["gantt", "Časová osa"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={layout === value}
+              className={cx(
+                "rounded-md px-2.5 py-1 text-sm whitespace-nowrap",
+                layout === value
+                  ? "bg-raised text-ink! shadow-[var(--shadow)]"
+                  : "text-muted! hover:text-ink!"
+              )}
+              onClick={() => choose(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {layout === "gantt" ? (
+        <GanttBoard items={visibleItems(db).filter((item) => item.type === "task")} global />
+      ) : (
+        <CalendarBoard items={items} external />
+      )}
     </div>
   );
 }

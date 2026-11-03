@@ -19,5 +19,6 @@ export function viewLabel(view: ViewMode): string {
   if (view === "list") return "Seznam";
   if (view === "board") return "Nástěnka";
   if (view === "notes") return "Poznámky";
+  if (view === "gantt") return "Časová osa";
   return "Kalendář";
 }

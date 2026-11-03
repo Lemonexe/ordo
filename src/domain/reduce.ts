@@ -102,7 +102,8 @@ export function reduce(db: Db, op: Op, ctx: Ctx): Db {
       return mapPerson(db, op.id, (person) => ({
         ...person,
         name: op.name?.trim() || person.name,
-        color: op.color !== undefined ? op.color : person.color,
+        color:
+          op.color !== undefined ? normalizeFolderColor(op.color) : person.color,
         emoji: op.emoji !== undefined ? op.emoji : person.emoji,
         updatedAt: ctx.now,
       }));
@@ -125,6 +126,19 @@ export function reduce(db: Db, op: Op, ctx: Ctx): Db {
           link.id === op.id
             ? { ...link, isDeleted: true, updatedAt: ctx.now }
             : link
+        ),
+      };
+    case "createMilestone":
+      return createMilestone(db, op, ctx);
+    case "updateMilestone":
+      return updateMilestone(db, op, ctx);
+    case "deleteMilestone":
+      return {
+        ...db,
+        milestones: db.milestones.map((row) =>
+          row.id === op.id && !row.isDeleted
+            ? { ...row, isDeleted: true, updatedAt: ctx.now }
+            : row
         ),
       };
     case "createView":
@@ -533,6 +547,8 @@ function createItem(db: Db, input: NewItem, ctx: Ctx): Db {
     pristine: true,
     sortOrder,
     dayOrder: null,
+    ganttOrder: null,
+    color: null,
     pinX: input.pinX ?? null,
     pinY: input.pinY ?? null,
     pinZ: input.pinZ ?? null,
@@ -667,6 +683,14 @@ function updateItem(
                 ? patch.dayOrder
                 : row.dayOrder ?? null
               : null,
+            ganttOrder:
+              patch.ganttOrder !== undefined
+                ? patch.ganttOrder
+                : row.ganttOrder ?? null,
+            color:
+              patch.color !== undefined
+                ? normalizeFolderColor(patch.color)
+                : row.color ?? null,
             pinX: patch.pinX !== undefined ? patch.pinX : row.pinX ?? null,
             pinY: patch.pinY !== undefined ? patch.pinY : row.pinY ?? null,
             pinZ: patch.pinZ !== undefined ? patch.pinZ : row.pinZ ?? null,
@@ -680,10 +704,11 @@ function updateItem(
               patch.isArchived !== undefined
                 ? patch.isArchived
                 : row.isArchived,
-            pristine:
-              Object.keys(patch).length === 1 && patch.dayOrder !== undefined
-                ? row.pristine
-                : false,
+            pristine: Object.keys(patch).every(
+              (key) => key === "dayOrder" || key === "ganttOrder"
+            )
+              ? row.pristine
+              : false,
             updatedAt: ctx.now,
           };
         });
@@ -822,6 +847,8 @@ function spawnFrom(db: Db, sourceId: string, ctx: Ctx): Db {
         )
       : sortKeyForStatus(db, folder.id, open?.id ?? null),
     dayOrder: null,
+    ganttOrder: null,
+    color: null,
     recurrenceFreq: rule.freq,
     recurrenceInterval: rule.interval,
     recurrenceWeekdays: weekdaysTo(rule.weekdays),
@@ -1061,7 +1088,7 @@ function createPerson(
         id: op.id,
         workspaceId: workspaceId(db),
         name,
-        color: op.color,
+        color: normalizeFolderColor(op.color),
         emoji: op.emoji,
         isDeleted: false,
         createdAt: ctx.now,
@@ -1112,6 +1139,61 @@ function addDependency(
         updatedAt: ctx.now,
       },
     ],
+  };
+}
+
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+function createMilestone(
+  db: Db,
+  op: Extract<Op, { type: "createMilestone" }>,
+  ctx: Ctx
+): Db {
+  const title = op.title.trim().slice(0, 200);
+  if (!title || !DAY_KEY.test(op.day)) return db;
+  if (byId(db.milestones, op.id)) return db;
+  if (op.folderId && !byId(db.folders, op.folderId)) return db;
+  return {
+    ...db,
+    milestones: [
+      ...db.milestones,
+      {
+        id: op.id,
+        workspaceId: workspaceId(db),
+        folderId: op.folderId,
+        title,
+        day: op.day,
+        color: null,
+        isDeleted: false,
+        createdAt: ctx.now,
+        updatedAt: ctx.now,
+      },
+    ],
+  };
+}
+
+function updateMilestone(
+  db: Db,
+  op: Extract<Op, { type: "updateMilestone" }>,
+  ctx: Ctx
+): Db {
+  const row = byId(db.milestones, op.id);
+  if (!row || row.isDeleted) return db;
+  const title =
+    op.title !== undefined ? op.title.trim().slice(0, 200) : row.title;
+  const day = op.day !== undefined ? op.day : row.day;
+  const color =
+    op.color !== undefined ? normalizeFolderColor(op.color) : row.color ?? null;
+  if (!title || !DAY_KEY.test(day)) return db;
+  if (title === row.title && day === row.day && color === (row.color ?? null))
+    return db;
+  return {
+    ...db,
+    milestones: db.milestones.map((entry) =>
+      entry.id === op.id
+        ? { ...entry, title, day, color, updatedAt: ctx.now }
+        : entry
+    ),
   };
 }
 
@@ -1362,6 +1444,7 @@ function purgeFolder(db: Db, id: string): Db {
       .filter((row) => row.id !== id)
       .map((row) => (row.parentId === id ? { ...row, parentId: null } : row)),
     statuses: db.statuses.filter((status) => status.folderId !== id),
+    milestones: db.milestones.filter((row) => row.folderId !== id),
     rules: db.rules.filter((rule) => rule.actionFolderId !== id),
   };
 }
@@ -1393,6 +1476,9 @@ function emptyTrash(db: Db): Db {
     ),
     itemLinks: keep(db.itemLinks).filter(
       (link) => itemIds.has(link.fromId) && itemIds.has(link.toId)
+    ),
+    milestones: keep(db.milestones).filter(
+      (row) => row.folderId === null || folderIds.has(row.folderId)
     ),
     savedViews: keep(db.savedViews),
     rules: keep(db.rules).filter((rule) => folderIds.has(rule.actionFolderId)),

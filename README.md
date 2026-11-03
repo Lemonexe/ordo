@@ -15,6 +15,21 @@ Aplikace běží na http://localhost:5177. Data zůstávají v tomhle prohlíže
 
 Otevři `/add?text=…`. První řádek je název, zbytek popis. Volitelně `folder` a `due=RRRR-MM-DD`.
 
+## Časová osa
+
+Každá složka i Kalendář umí kromě měsíce zobrazit Ganttův diagram. Každý úkol je pruh: plán od–do přes více dní, termín nebo plán na jeden den přes jeden den. Vazby „čeká na“ jsou šipky. Milníky jsou samostatná data, ne úkoly, a táhnou se svislou čárou přes celý diagram.
+
+- Pruh posuneš tažením, délku změníš tažením za okraj. Natažením jednodenního úkolu s termínem vznikne plán od–do. Po posunu se nabídne posun navazujících úkolů o stejný počet dní.
+- Šipku natáhneš z kolečka před pruhem nebo za ním, nebo tažením pruhu s klávesou Alt. Kliknutím na šipku ji odebereš.
+- Tažením v řádku Nový úkol vznikne úkol od–do, kliknutím úkol na jeden den. Tažením nebo kliknutím v řádku úkolu bez termínu ho naplánuješ.
+- Milník přidáš kliknutím do pásu Milníky pod datem. Tažením ho posuneš, kliknutím přejmenuješ, změníš datum nebo smažeš. Milník ve složce patří jí a jejím podsložkám, milník přidaný v Kalendáři je vidět všude.
+- Od–do jde nastavit i v detailu úkolu v části Kdy.
+- Pořadí řádků změníš tažením za úchyt vlevo od názvu. Podúkoly se přesouvají jen mezi sourozenci a rodič je bere s sebou. Ruční pořadí platí jen pro časovou osu, seznam ho nemění.
+- Šířku sloupce s úkoly změníš tažením za jeho pravý okraj.
+- Úkol i milník mají barvu složky. Vlastní barvu nastavíš v detailu úkolu (Barva) nebo v editoru milníku. Složka bez barvy nechá pruh neutrální. Barvu člověka, kterou má jeho kolečko u úkolů, nastavíš na jeho stránce v Lidech.
+- Při tažení šipky se cílový úkol zvýrazní a šipka se ukáže tam, kam dopadne. Vazba, která by vytvořila kruh nebo už existuje, svítí červeně.
+- Měřítko mění sevření prstů, Ctrl + kolečko nebo tlačítka lupy. Na dotykové obrazovce se pruh chytá podržením prstu.
+
 ## Synchronizace
 
 Evolu se zatím nezapíná. Až přijde na řadu, nahradí se modul `src/data/store.tsx`. Rozhraní dál čte stejný snímek a zapisuje stejné operace.

@@ -214,6 +214,7 @@ const watched = [
   "body",
   "priority",
   "paper",
+  "color",
   "dueAt",
   "dueHasTime",
   "plannedFor",
@@ -249,6 +250,8 @@ function itemEdit(previous: Item, item: Item, db: Db, ctx: Ctx): ActivityEntry |
     return entry(edited(item), target, ctx);
   if (keys.length === 1 && keys[0] === "priority")
     return entry(`Priorita ${quoted(item.title)} je ${priorityLabel(item.priority)}`, target, ctx);
+  if (keys.length === 1 && keys[0] === "color")
+    return entry(`Úkol ${quoted(item.title)} má jinou barvu`, target, ctx);
   if (keys.length === 1 && keys[0] === "paper")
     return entry(`Barva ${quoted(item.title)} je ${paperLabel(item.paper)}`, target, ctx);
   if (keys.every((key) => key === "dueAt" || key === "dueHasTime"))

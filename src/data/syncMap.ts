@@ -11,6 +11,7 @@ const collections = [
   ["person", "people"],
   ["dependency", "dependencies"],
   ["itemLink", "itemLinks"],
+  ["milestone", "milestones"],
   ["savedView", "savedViews"],
   ["rule", "rules"],
 ] as const;
@@ -99,6 +100,7 @@ export function isUntouched(db: Db): boolean {
     db.rules.length === 0 &&
     db.savedViews.length === 0 &&
     db.itemLinks.length === 0 &&
+    db.milestones.length === 0 &&
     db.dependencies.length === 0 &&
     db.itemTags.length === 0 &&
     folders.length <= 1 &&
