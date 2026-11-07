@@ -4,6 +4,15 @@ Osobní seznam, nástěnka a poznámky v jednom. Jedna položka má jednu domovs
 
 ## Spuštění
 
+Projekt používá Node.js 26. Je doporučeno použít [nvm](https://github.com/nvm-sh/nvm):
+
+```bash
+nvm install
+nvm use
+```
+
+Pro instalaci závislostí používej npm:
+
 ```bash
 npm install
 npm run dev
